@@ -60,7 +60,7 @@
 <div id="iosPromptBubble" class="hidden">
      <div class="bubble">
        📲 iPhone 使用者：<br>
-       請點擊 Safari 下方的 <strong>分享按鈕</strong>，然後選擇 <strong>「加入主畫面」</strong>！
+       請使用 Safari 並點擊下方的 <strong>分享按鈕</strong>，然後選擇 <strong>「加入主畫面」</strong>！
        <button onclick="this.parentElement.parentElement.style.display='none'">關閉</button>
      </div>
    </div>
@@ -87,20 +87,15 @@
       const tainan = document.getElementById('tainan');
       const error = document.getElementById('error');
 
-      const ua = navigator.userAgent.toLowerCase();
-
-      // 更精準地判斷 iOS 裝置
-      const isIos = /iphone|ipad|ipod/.test(ua);
-      
-      // 判斷是否為 iOS Safari（不包含其他 iOS 瀏覽器）
-      const isSafari = isIos && ua.includes("safari") && !ua.includes("crios") && !ua.includes("fxios");
-      
-      // 判斷是否是 PWA 模式（standalone）
-      const isInStandalone = window.navigator.standalone === true;
-      
-      if (isSafari && !isInStandalone) {
-        document.getElementById("iosPromptBubble").classList.remove("hidden");
-      }
+var ua = navigator.userAgent;
+var android = ua.indexOf('Android') > -1 || ua.indexOf('Adr') > -1; // android
+var iOS = !!ua.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/); // ios
+if(android==true){
+}else if(iOS==true){
+ document.getElementById("iosPromptBubble").classList.remove("hidden");
+}else{
+}
+     
       try {
         const urls = [
           'https://jsonplaceholder.typicode.com/posts/1',
