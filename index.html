@@ -1,79 +1,97 @@
+
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#000000">
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <title>我的 PWA</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="manifest" href="manifest.json" />
+  <title>停車場狀態</title>
   <style>
-    #ios-install-prompt {
+    body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
+    h1 { color: #333; }
+    .lot { margin-bottom: 20px; font-size: 1.2em; }
+    .error { color: red; font-weight: bold; }
+    #custom-install-prompt {
+      position: fixed; bottom: 30px; left: 20px; right: 20px;
+      background: #fff; border: 1px solid #ccc; padding: 15px;
+      border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 9999;
       display: none;
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      right: 20px;
-      background: #fff;
-      border: 1px solid #ccc;
-      padding: 10px;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      font-size: 14px;
-      z-index: 9999;
     }
-    #install-btn {
-      display: none;
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      padding: 10px 20px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
+    #custom-install-prompt button {
+      padding: 10px 15px; margin-right: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>Hello PWA</h1>
+  <h1>即時停車場剩餘車位</h1>
+  <div class="lot">台北停車場 剩餘車位 <span id="taipei">載入中...</span></div>
+  <div class="lot">台中停車場 剩餘車位 <span id="taichung">載入中...</span></div>
+  <div class="lot">台南停車場 剩餘車位 <span id="tainan">載入中...</span></div>
+  <div id="error" class="error"></div>
 
-  <div id="ios-install-prompt">
-    點擊 Safari 底部選單的 <strong>分享</strong> 按鈕，然後選擇 <strong>加入主畫面</strong>。
+  <div id="custom-install-prompt">
+    <p>想要安裝這個 App 嗎？</p>
+    <button id="custom-install-btn">安裝</button>
+    <button onclick="this.parentElement.style.display='none'">取消</button>
   </div>
 
-  <button id="install-btn">安裝 App</button>
-
   <script>
-    const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
-    const isInStandaloneMode = ('standalone' in window.navigator) && window.navigator.standalone;
-
-    if (isIos && !isInStandaloneMode) {
-      document.getElementById('ios-install-prompt').style.display = 'block';
-    }
-
     let deferredPrompt;
-    const installBtn = document.getElementById('install-btn');
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
-      installBtn.style.display = 'block';
+      document.getElementById('custom-install-prompt').style.display = 'block';
 
-      installBtn.addEventListener('click', () => {
-        installBtn.style.display = 'none';
+      document.getElementById('custom-install-btn').onclick = () => {
         deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(choiceResult => {
-          if (choiceResult.outcome === 'accepted') {
-            console.log('使用者接受安裝');
-          } else {
-            console.log('使用者拒絕安裝');
-          }
+        deferredPrompt.userChoice.then((choiceResult) => {
           deferredPrompt = null;
         });
-      });
+        document.getElementById('custom-install-prompt').style.display = 'none';
+      };
     });
+
+    async function fetchParkingData() {
+      const taipei = document.getElementById('taipei');
+      const taichung = document.getElementById('taichung');
+      const tainan = document.getElementById('tainan');
+      const error = document.getElementById('error');
+
+      try {
+        const urls = [
+          'https://jsonplaceholder.typicode.com/posts/1',
+          'https://jsonplaceholder.typicode.com/posts/2',
+          'https://jsonplaceholder.typicode.com/posts/3'
+        ];
+
+        const [res1, res2, res3] = await Promise.all(urls.map(url => fetch(url)));
+
+        if (!res1.ok || !res2.ok || !res3.ok) throw new Error('server');
+
+        const data1 = await res1.json();
+        const data2 = await res2.json();
+        const data3 = await res3.json();
+
+        taipei.textContent = data1.id * 10;
+        taichung.textContent = data2.id * 8;
+        tainan.textContent = data3.id * 5;
+
+        error.textContent = '';
+      } catch (err) {
+        if (!navigator.onLine) {
+          error.textContent = '您需要先連網';
+        } else {
+          error.textContent = '伺服器有問題，請稍後再試';
+        }
+        taipei.textContent = '—';
+        taichung.textContent = '—';
+        tainan.textContent = '—';
+      }
+    }
+
+    fetchParkingData();
+    setInterval(fetchParkingData, 3000);
   </script>
 </body>
 </html>
