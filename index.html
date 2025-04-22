@@ -20,6 +20,29 @@
     #custom-install-prompt button {
       padding: 10px 15px; margin-right: 10px;
     }
+    #iosPromptBubble .bubble {
+   position: fixed;
+   bottom: 20px;
+   left: 20px;
+   right: 20px;
+   background: #fff3cd;
+   color: #856404;
+   border: 1px solid #ffeeba;
+   border-radius: 8px;
+   padding: 1em;
+   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+   z-index: 9999;
+ }
+ 
+ #iosPromptBubble .bubble button {
+   background: transparent;
+   color: #856404;
+   border: none;
+   font-weight: bold;
+   float: right;
+   margin-top: 10px;
+   cursor: pointer;
+ }
   </style>
 </head>
 <body>
@@ -34,7 +57,13 @@
     <button id="custom-install-btn">安裝</button>
     <button onclick="this.parentElement.style.display='none'">取消</button>
   </div>
-
+<div id="iosPromptBubble" class="hidden">
+     <div class="bubble">
+       📲 iPhone 使用者：<br>
+       請點擊 Safari 下方的 <strong>分享按鈕</strong>，然後選擇 <strong>「加入主畫面」</strong>！
+       <button onclick="this.parentElement.parentElement.style.display='none'">關閉</button>
+     </div>
+   </div>
   <script>
     let deferredPrompt;
 
@@ -58,6 +87,13 @@
       const tainan = document.getElementById('tainan');
       const error = document.getElementById('error');
 
+      const isIos = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+     const isInStandalone = ('standalone' in navigator) && navigator.standalone;
+     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+ 
+     if (isIos && isSafari && !isInStandalone) {
+       document.getElementById('iosPromptBubble').classList.remove('hidden');
+     }
       try {
         const urls = [
           'https://jsonplaceholder.typicode.com/posts/1',
