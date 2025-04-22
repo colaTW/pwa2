@@ -80,7 +80,7 @@
         error.textContent = '';
       } catch (err) {
         if (!navigator.onLine) {
-          error.textContent = '您需要先連網';
+          error.textContent = '您需要先連網,⚠️ 目前為離線狀態，顯示為上次資料';
         } else {
           error.textContent = '伺服器有問題，請稍後再試';
         }
