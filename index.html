@@ -87,13 +87,20 @@
       const tainan = document.getElementById('tainan');
       const error = document.getElementById('error');
 
-      const isIos = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
-     const isInStandalone = ('standalone' in navigator) && navigator.standalone;
-     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
- 
-     if (isIos && isSafari && !isInStandalone) {
-       document.getElementById('iosPromptBubble').classList.remove('hidden');
-     }
+      const ua = navigator.userAgent.toLowerCase();
+
+      // 更精準地判斷 iOS 裝置
+      const isIos = /iphone|ipad|ipod/.test(ua);
+      
+      // 判斷是否為 iOS Safari（不包含其他 iOS 瀏覽器）
+      const isSafari = isIos && ua.includes("safari") && !ua.includes("crios") && !ua.includes("fxios");
+      
+      // 判斷是否是 PWA 模式（standalone）
+      const isInStandalone = window.navigator.standalone === true;
+      
+      if (isSafari && !isInStandalone) {
+        document.getElementById("iosPromptBubble").classList.remove("hidden");
+      }
       try {
         const urls = [
           'https://jsonplaceholder.typicode.com/posts/1',
