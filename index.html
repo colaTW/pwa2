@@ -73,14 +73,14 @@
         const data2 = await res2.json();
         const data3 = await res3.json();
 
-        taipei.textContent = data1.id * Math.random();
-        taichung.textContent = data2.id * Math.random();
-        tainan.textContent = data3.id * Math.random();
+        taipei.textContent =(Math.round(Math.random() * data1.id));
+        taichung.textContent = (Math.round(Math.random() * data2.id));
+        tainan.textContent = (Math.round(Math.random() * data3.id));
 
         error.textContent = '';
       } catch (err) {
         if (!navigator.onLine) {
-          error.textContent = '您需要先連網,⚠️ 目前為離線狀態，顯示為上次資料';
+          error.textContent = '您需要先連網';
         } else {
           error.textContent = '伺服器有問題，請稍後再試';
         }
