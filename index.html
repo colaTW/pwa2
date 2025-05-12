@@ -9,10 +9,19 @@
     body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
     h1 { color: #333; }
     .lot {
-      margin-bottom: 20px; font-size: 1.2em;
-      background: #fff; padding: 10px; border-radius: 5px;
-      position: relative; cursor: move;
-    }
+  margin-bottom: 20px;
+  font-size: 1.2em;
+  background: #fff;
+  padding: 10px;
+  border-radius: 5px;
+  position: relative;
+  cursor: move;
+
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
     .lot .tip {
       position: absolute;
       top: 5px;
