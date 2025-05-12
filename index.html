@@ -21,6 +21,10 @@
       -webkit-user-select: none;
       -webkit-touch-callout: none;
       touch-action: manipulation;
+      border: 2px dashed transparent;
+    }
+    .lot.dragging {
+      border-color: #2196f3;
     }
     .lot small {
       font-size: 0.8em;
@@ -160,13 +164,19 @@
     let pressTimer = null;
     const listElement = document.getElementById("parking-list");
 
-    new Sortable(listElement, {
+    const sortable = new Sortable(listElement, {
       animation: 150,
       handle: ".lot",
       disabled: true,
-      onEnd: function () {
+      onStart: function (evt) {
+        evt.item.classList.add("dragging");
+      },
+      onEnd: function (evt) {
+        evt.item.classList.remove("dragging");
         const newOrder = [...document.querySelectorAll('.lot')].map(el => parseInt(el.dataset.id));
         saveOrderToCookie(newOrder);
+        Sortable.get(listElement).option("disabled", true);
+        dragReady = false;
       }
     });
 
@@ -175,16 +185,12 @@
         pressTimer = setTimeout(() => {
           dragReady = true;
           Sortable.get(listElement).option("disabled", false);
-        }, 500); // 長按 0.5 秒才開啟拖拉
+        }, 200); // 改為 0.2 秒
       }
     });
 
     listElement.addEventListener("touchend", function () {
       clearTimeout(pressTimer);
-      if (dragReady) {
-        setTimeout(() => Sortable.get(listElement).option("disabled", true), 500);
-        dragReady = false;
-      }
     });
 
     async function fetchParkingData() {
