@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <link rel="manifest" href="manifest.json" />
   <title>停車場狀態</title>
-   <style>
+  <style>
     body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
     h1 { color: #333; }
     .lot {
@@ -80,7 +80,7 @@
     .dragging {
       opacity: 0.5;
     }
-  </style>
+  </style>>
 </head>
 <body>
   <h1>即時停車場剩餘車位</h1>
@@ -109,7 +109,7 @@
       script.src = "https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js";
       script.onload = () => {
         console.log("Sortable.js 已經加載完成");
-        // 在此處可以初始化Sortable.js的相關功能
+        initializeSortable();  // 初始化拖放功能
       };
       document.head.appendChild(script);
     }
@@ -168,8 +168,6 @@
         div.addEventListener("touchstart", () => showTip(div));
         div.addEventListener("mouseenter", () => showTip(div));
       });
-
-      addDragAndDrop();
     }
 
     function showTip(div) {
@@ -230,6 +228,16 @@
       });
     }
 
+    function initializeSortable() {
+      const container = document.getElementById("lot-container");
+      new Sortable(container, {
+        handle: '.lot',  // 設定只能拖拉整個lot區塊
+        onEnd(evt) {
+          saveOrder();
+        }
+      });
+    }
+
     async function fetchParkingData() {
       const error = document.getElementById('error');
       const ua = navigator.userAgent;
@@ -259,7 +267,7 @@
 
     renderLots();
     fetchParkingData();
-    setInterval(fetchParkingData, 3000);
+    setInterval(fetchParkingData, 10000);
   </script>
 </body>
 </html>
