@@ -104,15 +104,7 @@
     // 檢查是否是 iPhone
     const isIphone = /iphone/i.test(navigator.userAgent);
 
-    if (isIphone) {
-      const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js";
-      script.onload = () => {
-        console.log("Sortable.js 已經加載完成");
-        initializeSortable();  // 初始化拖放功能
-      };
-      document.head.appendChild(script);
-    }
+   
 
     let deferredPrompt;
 
@@ -243,6 +235,13 @@
       const ua = navigator.userAgent;
       const iOS = !!ua.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/);
       if (iOS) {
+         const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js";
+      script.onload = () => {
+        console.log("Sortable.js 已經加載完成");
+        initializeSortable();  // 初始化拖放功能
+      };
+      document.head.appendChild(script);
         document.getElementById("iosPromptBubble").classList.remove("hidden");
       }
 
