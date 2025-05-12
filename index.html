@@ -24,6 +24,13 @@
     .lot small {
       font-size: 0.8em;
       color: #888;
+      display: none;
+      position: absolute;
+      bottom: 5px;
+      right: 10px;
+    }
+    .lot.show-hint small {
+      display: inline;
     }
     .error { color: red; font-weight: bold; }
     #custom-install-prompt {
@@ -96,13 +103,11 @@
     });
 
     var ua = navigator.userAgent;
-    var android = ua.indexOf('Android') > -1 || ua.indexOf('Adr') > -1;
     var iOS = !!ua.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/);
     if (iOS) {
       document.getElementById("iosPromptBubble").classList.remove("hidden");
     }
 
-    // 假資料
     const parkingData = [
       { id: 1, name: "台北停車場", ps: 3 },
       { id: 2, name: "台中停車場", ps: 5 },
@@ -139,31 +144,52 @@
           🚗 ${lot.name} 剩餘車位 ${lot.ps}
           <small>👆 按住即可拖拉排序</small>
         `;
+        // 提示提示2秒
+        div.addEventListener("pointerdown", () => {
+          div.classList.add("show-hint");
+          setTimeout(() => {
+            div.classList.remove("show-hint");
+          }, 2000);
+        });
         listEl.appendChild(div);
       });
     }
 
     renderParkingLots(sortByCookie([...parkingData]));
 
+    // 初始化排序功能，需長按後才能拖動
     new Sortable(document.getElementById("parking-list"), {
       animation: 150,
+      delay: 300, // 長按 300ms 才能拖
+      delayOnTouchOnly: true,
+      touchStartThreshold: 5,
       onEnd: function () {
         const newOrder = [...document.querySelectorAll('.lot')].map(el => parseInt(el.dataset.id));
         saveOrderToCookie(newOrder);
       }
     });
 
-    // 原本定時模擬更新邏輯（可改為接 API）
     async function fetchParkingData() {
       const error = document.getElementById('error');
       try {
-        // 模擬 API 呼叫更新剩餘車位
         const updated = parkingData.map(p => ({
           ...p,
           ps: Math.floor(Math.random() * 10)
         }));
         renderParkingLots(sortByCookie(updated));
         error.textContent = '';
+
+        // 重新附加排序功能和提示事件
+        new Sortable(document.getElementById("parking-list"), {
+          animation: 150,
+          delay: 300,
+          delayOnTouchOnly: true,
+          touchStartThreshold: 5,
+          onEnd: function () {
+            const newOrder = [...document.querySelectorAll('.lot')].map(el => parseInt(el.dataset.id));
+            saveOrderToCookie(newOrder);
+          }
+        });
       } catch (err) {
         if (!navigator.onLine) {
           error.textContent = '您需要先連網';
