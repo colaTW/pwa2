@@ -8,7 +8,26 @@
   <style>
     body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
     h1 { color: #333; }
-    .lot { margin-bottom: 20px; font-size: 1.2em; background: #fff; padding: 10px; border-radius: 5px; cursor: move; }
+    .lot {
+      margin-bottom: 20px; font-size: 1.2em;
+      background: #fff; padding: 10px; border-radius: 5px;
+      position: relative; cursor: move;
+    }
+    .lot .tip {
+      position: absolute;
+      top: 5px;
+      right: 10px;
+      font-size: 0.8em;
+      color: #999;
+      background: #eee;
+      padding: 2px 6px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .lot.show-tip .tip {
+      opacity: 1;
+    }
     .error { color: red; font-weight: bold; }
     #custom-install-prompt {
       position: fixed; bottom: 30px; left: 20px; right: 20px;
@@ -118,11 +137,25 @@
         div.className = "lot";
         div.draggable = true;
         div.dataset.id = lot.id;
-        div.innerHTML = `${lot.name} 剩餘車位 <span id="lot-${lot.id}">${lot.ps}</span>`;
+        div.innerHTML = `
+          ${lot.name} 剩餘車位 <span id="lot-${lot.id}">${lot.ps}</span>
+          <span class="tip">按住即可拖拉排序</span>
+        `;
         container.appendChild(div);
+
+        // Show tip on hover/touch
+        div.addEventListener("touchstart", () => showTip(div));
+        div.addEventListener("mouseenter", () => showTip(div));
       });
 
       addDragAndDrop();
+    }
+
+    function showTip(div) {
+      div.classList.add("show-tip");
+      setTimeout(() => {
+        div.classList.remove("show-tip");
+      }, 2000);
     }
 
     function addDragAndDrop() {
@@ -130,87 +163,11 @@
       let dragging = null;
 
       container.querySelectorAll(".lot").forEach(item => {
-        item.addEventListener("dragstart", (e) => {
+        item.addEventListener("dragstart", () => {
           dragging = item;
           item.classList.add("dragging");
         });
 
         item.addEventListener("dragend", () => {
           dragging = null;
-          container.querySelectorAll(".lot").forEach(el => el.classList.remove("drag-over-top", "drag-over-bottom", "dragging"));
-        });
-
-        item.addEventListener("dragover", (e) => {
-          e.preventDefault();
-          const bounding = item.getBoundingClientRect();
-          const offset = e.clientY - bounding.top;
-          const height = bounding.height / 2;
-
-          if (offset > height) {
-            item.classList.remove("drag-over-top");
-            item.classList.add("drag-over-bottom");
-          } else {
-            item.classList.remove("drag-over-bottom");
-            item.classList.add("drag-over-top");
-          }
-        });
-
-        item.addEventListener("dragleave", () => {
-          item.classList.remove("drag-over-top", "drag-over-bottom");
-        });
-
-        item.addEventListener("drop", (event) => {
-          const bounding = item.getBoundingClientRect();
-          const offset = event.clientY - bounding.top;
-          const height = bounding.height / 2;
-
-          if (offset > height) {
-            item.after(dragging);
-          } else {
-            item.before(dragging);
-          }
-
-          saveOrder();
-          item.classList.remove("drag-over-top", "drag-over-bottom");
-        });
-      });
-    }
-
-    async function fetchParkingData() {
-      const error = document.getElementById('error');
-      const ua = navigator.userAgent;
-      const android = ua.indexOf('Android') > -1 || ua.indexOf('Adr') > -1;
-      const iOS = !!ua.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/);
-      if (iOS) {
-        document.getElementById("iosPromptBubble").classList.remove("hidden");
-      }
-
-      try {
-        // 模擬 API：用亂數更新 ps 值
-        parkingLots.forEach(lot => {
-          lot.ps = Math.floor(Math.random() * 10);
-          const el = document.getElementById(`lot-${lot.id}`);
-          if (el) el.textContent = lot.ps;
-        });
-
-        error.textContent = '';
-      } catch (err) {
-        if (!navigator.onLine) {
-          error.textContent = '您需要先連網';
-        } else {
-          error.textContent = '伺服器有問題，請稍後再試';
-        }
-
-        parkingLots.forEach(lot => {
-          const el = document.getElementById(`lot-${lot.id}`);
-          if (el) el.textContent = '—';
-        });
-      }
-    }
-
-    renderLots();
-    fetchParkingData();
-    setInterval(fetchParkingData, 3000);
-  </script>
-</body>
-</html>
+          container.querySelectorAll(".lot").forEach(el => el.classList.remove("drag-over-top", "drag-over-bottom
