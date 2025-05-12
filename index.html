@@ -180,18 +180,26 @@
       }
     });
 
-    listElement.addEventListener("touchstart", function (e) {
-      if (e.target.closest(".lot")) {
-        pressTimer = setTimeout(() => {
-          dragReady = true;
-          Sortable.get(listElement).option("disabled", false);
-        }, 200); // 改為 0.2 秒
-      }
-    });
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-    listElement.addEventListener("touchend", function () {
-      clearTimeout(pressTimer);
-    });
+    if (!isTouchDevice) {
+      // 桌面直接啟用拖曳
+      Sortable.get(listElement).option("disabled", false);
+    } else {
+      // 手機需長按 0.2 秒啟用拖曳
+      listElement.addEventListener("touchstart", function (e) {
+        if (e.target.closest(".lot")) {
+          pressTimer = setTimeout(() => {
+            dragReady = true;
+            Sortable.get(listElement).option("disabled", false);
+          }, 200);
+        }
+      });
+
+      listElement.addEventListener("touchend", function () {
+        clearTimeout(pressTimer);
+      });
+    }
 
     async function fetchParkingData() {
       const error = document.getElementById('error');
@@ -211,7 +219,7 @@
       }
     }
 
-    setInterval(fetchParkingData, 10000);
+    setInterval(fetchParkingData, 5000);
   </script>
 </body>
 </html>
