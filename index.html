@@ -1,138 +1,118 @@
-
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="manifest" href="manifest.json" />
-  <title>停車場狀態</title>
+  <title>即時停車場狀態</title>
   <style>
     body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
     h1 { color: #333; }
-    .lot { margin-bottom: 20px; font-size: 1.2em; }
+    .lot { margin-bottom: 10px; padding: 10px; background: white; border-radius: 5px; cursor: move; }
     .error { color: red; font-weight: bold; }
-    #custom-install-prompt {
-      position: fixed; bottom: 30px; left: 20px; right: 20px;
-      background: #fff; border: 1px solid #ccc; padding: 15px;
-      border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 9999;
-      display: none;
+    .drag-over { background-color: #d3eafd !important; }
+
+    #lot-container {
+      max-width: 400px;
     }
-    #custom-install-prompt button {
-      padding: 10px 15px; margin-right: 10px;
-    }
-    #iosPromptBubble .bubble {
-   position: fixed;
-   bottom: 20px;
-   left: 20px;
-   right: 20px;
-   background: #fff3cd;
-   color: #856404;
-   border: 1px solid #ffeeba;
-   border-radius: 8px;
-   padding: 1em;
-   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-   z-index: 9999;
- }
- 
- #iosPromptBubble .bubble button {
-   background: transparent;
-   color: #856404;
-   border: none;
-   font-weight: bold;
-   float: right;
-   margin-top: 10px;
-   cursor: pointer;
- }
-    .hidden {
-   display: none;
- }
   </style>
 </head>
 <body>
   <h1>即時停車場剩餘車位</h1>
-  <div class="lot">台北停車場 剩餘車位 <span id="taipei">載入中...</span></div>
-  <div class="lot">台中停車場 剩餘車位 <span id="taichung">載入中...</span></div>
-  <div class="lot">台南停車場 剩餘車位 <span id="tainan">載入中...</span></div>
+  <div id="lot-container"></div>
   <div id="error" class="error"></div>
 
-  <div id="custom-install-prompt">
-    <p>想要安裝這個 App 嗎？</p>
-    <button id="custom-install-btn">安裝</button>
-    <button onclick="this.parentElement.style.display='none'">取消</button>
-  </div>
-<div id="iosPromptBubble" class="hidden">
-     <div class="bubble">
-       📲 iPhone 使用者：<br>
-       請使用 Safari 並點擊下方的 <strong>分享按鈕</strong>，然後選擇 <strong>「加入主畫面」</strong>！
-       <button onclick="this.parentElement.parentElement.style.display='none'">關閉</button>
-     </div>
-   </div>
   <script>
-    let deferredPrompt;
+    const mockData = [
+      { id: 1, name: "台北停車場", ps: 5 },
+      { id: 2, name: "台中停車場", ps: 3 },
+      { id: 3, name: "台南停車場", ps: 8 },
+      { id: 4, name: "高雄停車場", ps: 2 },
+      { id: 5, name: "新竹停車場", ps: 6 }
+    ];
 
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      document.getElementById('custom-install-prompt').style.display = 'block';
+    const container = document.getElementById("lot-container");
 
-      document.getElementById('custom-install-btn').onclick = () => {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-          deferredPrompt = null;
-        });
-        document.getElementById('custom-install-prompt').style.display = 'none';
-      };
-    });
-
-    async function fetchParkingData() {
-      const taipei = document.getElementById('taipei');
-      const taichung = document.getElementById('taichung');
-      const tainan = document.getElementById('tainan');
-      const error = document.getElementById('error');
-
-var ua = navigator.userAgent;
-var android = ua.indexOf('Android') > -1 || ua.indexOf('Adr') > -1; // android
-var iOS = !!ua.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/); // ios
-if(android==true){
-}else if(iOS==true){
- document.getElementById("iosPromptBubble").classList.remove("hidden");
-}else{
-}
-     
-      try {
-        const urls = [
-          'https://jsonplaceholder.typicode.com/posts/1',
-          'https://jsonplaceholder.typicode.com/posts/2',
-          'https://jsonplaceholder.typicode.com/posts/3'
-        ];
-
-        const [res1, res2, res3] = await Promise.all(urls.map(url => fetch(url)));
-
-        if (!res1.ok || !res2.ok || !res3.ok) throw new Error('server');
-
-        const data1 = await res1.json();
-        const data2 = await res2.json();
-        const data3 = await res3.json();
-
-        taipei.textContent =(Math.round(Math.random() * data1.id));
-        taichung.textContent = (Math.round(Math.random() * data2.id));
-        tainan.textContent = (Math.round(Math.random() * data3.id));
-
-        error.textContent = '';
-      } catch (err) {
-        if (!navigator.onLine) {
-          error.textContent = '您需要先連網';
-        } else {
-          error.textContent = '伺服器有問題，請稍後再試';
-        }
-        taipei.textContent = '—';
-        taichung.textContent = '—';
-        tainan.textContent = '—';
-      }
+    function setCookie(name, value, days) {
+      const d = new Date();
+      d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+      document.cookie = name + "=" + value + ";expires=" + d.toUTCString() + ";path=/";
     }
 
-    fetchParkingData();
-    setInterval(fetchParkingData, 3000);
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp(name + "=([^;]+)"));
+      return match ? decodeURIComponent(match[1]) : "";
+    }
+
+    function renderLots(data) {
+      container.innerHTML = "";
+      data.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "lot";
+        div.draggable = true;
+        div.dataset.id = item.id;
+        div.innerText = `${item.name} - 剩餘車位 ${item.ps}`;
+        container.appendChild(div);
+      });
+      addDragAndDrop();
+    }
+
+    function addDragAndDrop() {
+      const items = document.querySelectorAll('.lot');
+      let dragSrcEl = null;
+
+      items.forEach(item => {
+        item.addEventListener('dragstart', (e) => {
+          dragSrcEl = item;
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/html', item.outerHTML);
+          item.classList.add('dragging');
+        });
+
+        item.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          item.classList.add('drag-over');
+        });
+
+        item.addEventListener('dragleave', () => {
+          item.classList.remove('drag-over');
+        });
+
+        item.addEventListener('drop', (e) => {
+          e.preventDefault();
+          item.classList.remove('drag-over');
+          if (dragSrcEl !== item) {
+            container.removeChild(dragSrcEl);
+            const dropHTML = e.dataTransfer.getData('text/html');
+            item.insertAdjacentHTML('beforebegin', dropHTML);
+            const newItem = container.querySelector('.dragging');
+            newItem.classList.remove('dragging');
+            addDragAndDrop();
+            saveCurrentOrder();
+          }
+        });
+
+        item.addEventListener('dragend', () => {
+          item.classList.remove('dragging');
+        });
+      });
+    }
+
+    function saveCurrentOrder() {
+      const ids = Array.from(document.querySelectorAll('.lot')).map(div => div.dataset.id);
+      setCookie('lotOrder', ids.join(','), 365);
+    }
+
+    function loadOrder(data) {
+      const order = getCookie('lotOrder');
+      if (!order) return data;
+      const idOrder = order.split(',').map(Number);
+      const map = new Map(data.map(item => [item.id, item]));
+      return idOrder.map(id => map.get(id)).filter(Boolean);
+    }
+
+    // 初始化
+    const orderedData = loadOrder(mockData);
+    renderLots(orderedData);
   </script>
 </body>
 </html>
