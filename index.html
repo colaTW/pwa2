@@ -170,4 +170,75 @@
 
         item.addEventListener("dragend", () => {
           dragging = null;
-          container.querySelectorAll(".lot").forEach(el => el.classList.remove("drag-over-top", "drag-over-bottom
+          container.querySelectorAll(".lot").forEach(el => el.classList.remove("drag-over-top", "drag-over-bottom", "dragging"));
+        });
+
+        item.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          const bounding = item.getBoundingClientRect();
+          const offset = e.clientY - bounding.top;
+          const height = bounding.height / 2;
+
+          if (offset > height) {
+            item.classList.remove("drag-over-top");
+            item.classList.add("drag-over-bottom");
+          } else {
+            item.classList.remove("drag-over-bottom");
+            item.classList.add("drag-over-top");
+          }
+        });
+
+        item.addEventListener("dragleave", () => {
+          item.classList.remove("drag-over-top", "drag-over-bottom");
+        });
+
+        item.addEventListener("drop", (event) => {
+          const bounding = item.getBoundingClientRect();
+          const offset = event.clientY - bounding.top;
+          const height = bounding.height / 2;
+
+          if (offset > height) {
+            item.after(dragging);
+          } else {
+            item.before(dragging);
+          }
+
+          saveOrder();
+          item.classList.remove("drag-over-top", "drag-over-bottom");
+        });
+      });
+    }
+
+    async function fetchParkingData() {
+      const error = document.getElementById('error');
+      const ua = navigator.userAgent;
+      const iOS = !!ua.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/);
+      if (iOS) {
+        document.getElementById("iosPromptBubble").classList.remove("hidden");
+      }
+
+      try {
+        // 模擬 API：用亂數更新 ps 值
+        parkingLots.forEach(lot => {
+          lot.ps = Math.floor(Math.random() * 10);
+          const el = document.getElementById(`lot-${lot.id}`);
+          if (el) el.textContent = lot.ps;
+        });
+
+        error.textContent = '';
+      } catch (err) {
+        error.textContent = navigator.onLine ? '伺服器有問題，請稍後再試' : '您需要先連網';
+
+        parkingLots.forEach(lot => {
+          const el = document.getElementById(`lot-${lot.id}`);
+          if (el) el.textContent = '—';
+        });
+      }
+    }
+
+    renderLots();
+    fetchParkingData();
+    setInterval(fetchParkingData, 3000);
+  </script>
+</body>
+</html>
