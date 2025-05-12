@@ -3,16 +3,54 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>即時停車場狀態</title>
+  <link rel="manifest" href="manifest.json" />
+  <title>停車場狀態</title>
   <style>
     body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
     h1 { color: #333; }
-    .lot { margin-bottom: 10px; padding: 10px; background: white; border-radius: 5px; cursor: move; }
+    .lot { margin-bottom: 20px; font-size: 1.2em; background: #fff; padding: 10px; border-radius: 5px; cursor: move; }
     .error { color: red; font-weight: bold; }
-    .drag-over { background-color: #d3eafd !important; }
+    #custom-install-prompt {
+      position: fixed; bottom: 30px; left: 20px; right: 20px;
+      background: #fff; border: 1px solid #ccc; padding: 15px;
+      border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 9999;
+      display: none;
+    }
+    #custom-install-prompt button {
+      padding: 10px 15px; margin-right: 10px;
+    }
+    #iosPromptBubble .bubble {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeeba;
+      border-radius: 8px;
+      padding: 1em;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      z-index: 9999;
+    }
+    #iosPromptBubble .bubble button {
+      background: transparent;
+      color: #856404;
+      border: none;
+      font-weight: bold;
+      float: right;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    .hidden { display: none; }
 
-    #lot-container {
-      max-width: 400px;
+    .drag-over-top {
+      border-top: 2px dashed #007bff;
+    }
+    .drag-over-bottom {
+      border-bottom: 2px dashed #007bff;
+    }
+    .dragging {
+      opacity: 0.5;
     }
   </style>
 </head>
@@ -21,98 +59,158 @@
   <div id="lot-container"></div>
   <div id="error" class="error"></div>
 
+  <div id="custom-install-prompt">
+    <p>想要安裝這個 App 嗎？</p>
+    <button id="custom-install-btn">安裝</button>
+    <button onclick="this.parentElement.style.display='none'">取消</button>
+  </div>
+  <div id="iosPromptBubble" class="hidden">
+    <div class="bubble">
+      📲 iPhone 使用者：<br>
+      請使用 Safari 並點擊下方的 <strong>分享按鈕</strong>，然後選擇 <strong>「加入主畫面」</strong>！
+      <button onclick="this.parentElement.parentElement.style.display='none'">關閉</button>
+    </div>
+  </div>
+
   <script>
-    const mockData = [
-      { id: 1, name: "台北停車場", ps: 5 },
-      { id: 2, name: "台中停車場", ps: 3 },
-      { id: 3, name: "台南停車場", ps: 8 },
-      { id: 4, name: "高雄停車場", ps: 2 },
-      { id: 5, name: "新竹停車場", ps: 6 }
+    let deferredPrompt;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('custom-install-prompt').style.display = 'block';
+
+      document.getElementById('custom-install-btn').onclick = () => {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(() => {
+          deferredPrompt = null;
+        });
+        document.getElementById('custom-install-prompt').style.display = 'none';
+      };
+    });
+
+    const parkingLots = [
+      { id: 1, name: "台北停車場", ps: 3 },
+      { id: 2, name: "台中停車場", ps: 2 },
+      { id: 3, name: "台南停車場", ps: 5 },
+      { id: 4, name: "桃園停車場", ps: 4 },
+      { id: 5, name: "新竹停車場", ps: 1 },
     ];
 
-    const container = document.getElementById("lot-container");
-
-    function setCookie(name, value, days) {
-      const d = new Date();
-      d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
-      document.cookie = name + "=" + value + ";expires=" + d.toUTCString() + ";path=/";
+    function getOrderFromCookie() {
+      const match = document.cookie.match(/lotOrder=([^;]+)/);
+      return match ? JSON.parse(decodeURIComponent(match[1])) : null;
     }
 
-    function getCookie(name) {
-      const match = document.cookie.match(new RegExp(name + "=([^;]+)"));
-      return match ? decodeURIComponent(match[1]) : "";
+    function saveOrder() {
+      const ids = Array.from(document.querySelectorAll(".lot")).map(div => div.dataset.id);
+      document.cookie = "lotOrder=" + encodeURIComponent(JSON.stringify(ids)) + ";path=/;max-age=31536000";
     }
 
-    function renderLots(data) {
+    function renderLots() {
+      const container = document.getElementById("lot-container");
       container.innerHTML = "";
-      data.forEach(item => {
+      const order = getOrderFromCookie();
+      const sortedLots = order ? order.map(id => parkingLots.find(lot => lot.id == id)) : parkingLots;
+
+      sortedLots.forEach(lot => {
         const div = document.createElement("div");
         div.className = "lot";
         div.draggable = true;
-        div.dataset.id = item.id;
-        div.innerText = `${item.name} - 剩餘車位 ${item.ps}`;
+        div.dataset.id = lot.id;
+        div.innerHTML = `${lot.name} 剩餘車位 <span id="lot-${lot.id}">${lot.ps}</span>`;
         container.appendChild(div);
       });
+
       addDragAndDrop();
     }
 
     function addDragAndDrop() {
-      const items = document.querySelectorAll('.lot');
-      let dragSrcEl = null;
+      const container = document.getElementById("lot-container");
+      let dragging = null;
 
-      items.forEach(item => {
-        item.addEventListener('dragstart', (e) => {
-          dragSrcEl = item;
-          e.dataTransfer.effectAllowed = 'move';
-          e.dataTransfer.setData('text/html', item.outerHTML);
-          item.classList.add('dragging');
+      container.querySelectorAll(".lot").forEach(item => {
+        item.addEventListener("dragstart", (e) => {
+          dragging = item;
+          item.classList.add("dragging");
         });
 
-        item.addEventListener('dragover', (e) => {
+        item.addEventListener("dragend", () => {
+          dragging = null;
+          container.querySelectorAll(".lot").forEach(el => el.classList.remove("drag-over-top", "drag-over-bottom", "dragging"));
+        });
+
+        item.addEventListener("dragover", (e) => {
           e.preventDefault();
-          item.classList.add('drag-over');
-        });
+          const bounding = item.getBoundingClientRect();
+          const offset = e.clientY - bounding.top;
+          const height = bounding.height / 2;
 
-        item.addEventListener('dragleave', () => {
-          item.classList.remove('drag-over');
-        });
-
-        item.addEventListener('drop', (e) => {
-          e.preventDefault();
-          item.classList.remove('drag-over');
-          if (dragSrcEl !== item) {
-            container.removeChild(dragSrcEl);
-            const dropHTML = e.dataTransfer.getData('text/html');
-            item.insertAdjacentHTML('beforebegin', dropHTML);
-            const newItem = container.querySelector('.dragging');
-            newItem.classList.remove('dragging');
-            addDragAndDrop();
-            saveCurrentOrder();
+          if (offset > height) {
+            item.classList.remove("drag-over-top");
+            item.classList.add("drag-over-bottom");
+          } else {
+            item.classList.remove("drag-over-bottom");
+            item.classList.add("drag-over-top");
           }
         });
 
-        item.addEventListener('dragend', () => {
-          item.classList.remove('dragging');
+        item.addEventListener("dragleave", () => {
+          item.classList.remove("drag-over-top", "drag-over-bottom");
+        });
+
+        item.addEventListener("drop", (event) => {
+          const bounding = item.getBoundingClientRect();
+          const offset = event.clientY - bounding.top;
+          const height = bounding.height / 2;
+
+          if (offset > height) {
+            item.after(dragging);
+          } else {
+            item.before(dragging);
+          }
+
+          saveOrder();
+          item.classList.remove("drag-over-top", "drag-over-bottom");
         });
       });
     }
 
-    function saveCurrentOrder() {
-      const ids = Array.from(document.querySelectorAll('.lot')).map(div => div.dataset.id);
-      setCookie('lotOrder', ids.join(','), 365);
+    async function fetchParkingData() {
+      const error = document.getElementById('error');
+      const ua = navigator.userAgent;
+      const android = ua.indexOf('Android') > -1 || ua.indexOf('Adr') > -1;
+      const iOS = !!ua.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/);
+      if (iOS) {
+        document.getElementById("iosPromptBubble").classList.remove("hidden");
+      }
+
+      try {
+        // 模擬 API：用亂數更新 ps 值
+        parkingLots.forEach(lot => {
+          lot.ps = Math.floor(Math.random() * 10);
+          const el = document.getElementById(`lot-${lot.id}`);
+          if (el) el.textContent = lot.ps;
+        });
+
+        error.textContent = '';
+      } catch (err) {
+        if (!navigator.onLine) {
+          error.textContent = '您需要先連網';
+        } else {
+          error.textContent = '伺服器有問題，請稍後再試';
+        }
+
+        parkingLots.forEach(lot => {
+          const el = document.getElementById(`lot-${lot.id}`);
+          if (el) el.textContent = '—';
+        });
+      }
     }
 
-    function loadOrder(data) {
-      const order = getCookie('lotOrder');
-      if (!order) return data;
-      const idOrder = order.split(',').map(Number);
-      const map = new Map(data.map(item => [item.id, item]));
-      return idOrder.map(id => map.get(id)).filter(Boolean);
-    }
-
-    // 初始化
-    const orderedData = loadOrder(mockData);
-    renderLots(orderedData);
+    renderLots();
+    fetchParkingData();
+    setInterval(fetchParkingData, 3000);
   </script>
 </body>
 </html>
