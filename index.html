@@ -209,6 +209,13 @@
       });
     }
 
+    // 如果是 iPhone 設備，禁用文字選取
+    const ua = navigator.userAgent;
+    const iOS = !!ua.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/);
+    if (iOS) {
+      document.body.style.userSelect = 'none'; // 禁用文字選取
+    }
+
     async function fetchParkingData() {
       const error = document.getElementById('error');
       const ua = navigator.userAgent;
