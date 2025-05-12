@@ -5,31 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <link rel="manifest" href="manifest.json" />
   <title>停車場狀態</title>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <style>
     body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
     h1 { color: #333; }
     .lot {
-      margin-bottom: 15px;
+      margin-bottom: 20px;
       font-size: 1.2em;
-      background: white;
+      background: #fff;
       padding: 10px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-radius: 5px;
       position: relative;
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
     }
-    .drag-hint {
+    .lot small {
+      font-size: 0.8em;
+      color: #888;
       position: absolute;
       top: 5px;
       right: 10px;
-      background: rgba(0,0,0,0.7);
-      color: white;
-      font-size: 0.75em;
-      padding: 2px 6px;
-      border-radius: 4px;
       display: none;
     }
-    .lot.drag-over {
-      border: 2px dashed blue;
+    .lot.show-hint small {
+      display: inline;
     }
     .error { color: red; font-weight: bold; }
     #custom-install-prompt {
@@ -63,9 +65,7 @@
       margin-top: 10px;
       cursor: pointer;
     }
-    .hidden {
-      display: none;
-    }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
@@ -78,6 +78,7 @@
     <button id="custom-install-btn">安裝</button>
     <button onclick="this.parentElement.style.display='none'">取消</button>
   </div>
+
   <div id="iosPromptBubble" class="hidden">
     <div class="bubble">
       📲 iPhone 使用者：<br>
@@ -88,122 +89,122 @@
 
   <script>
     let deferredPrompt;
+
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
       document.getElementById('custom-install-prompt').style.display = 'block';
-
       document.getElementById('custom-install-btn').onclick = () => {
         deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(() => deferredPrompt = null);
+        deferredPrompt.userChoice.then(() => {
+          deferredPrompt = null;
+        });
         document.getElementById('custom-install-prompt').style.display = 'none';
       };
     });
 
-    const parkingList = document.getElementById('parking-list');
-    const error = document.getElementById('error');
-    const storageKey = 'parking_order';
+    var ua = navigator.userAgent;
+    var android = ua.indexOf('Android') > -1 || ua.indexOf('Adr') > -1;
+    var iOS = !!ua.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/);
+    if (iOS) {
+      document.getElementById("iosPromptBubble").classList.remove("hidden");
+    }
 
-    const mockData = [
-      { id: 1, name: 'A 停車場', ps: 5 },
-      { id: 2, name: 'B 停車場', ps: 3 },
-      { id: 3, name: 'C 停車場', ps: 8 },
-      { id: 4, name: 'D 停車場', ps: 2 },
-      { id: 5, name: 'E 停車場', ps: 7 }
+    const parkingData = [
+      { id: 1, name: "台北停車場", ps: 3 },
+      { id: 2, name: "台中停車場", ps: 5 },
+      { id: 3, name: "台南停車場", ps: 2 },
+      { id: 4, name: "高雄停車場", ps: 6 },
+      { id: 5, name: "桃園停車場", ps: 1 }
     ];
 
-    let dragSrcEl = null;
-
-    function createLot(item) {
-      const div = document.createElement('div');
-      div.className = 'lot';
-      div.setAttribute('draggable', 'true');
-      div.dataset.id = item.id;
-      div.innerHTML = `${item.name} 剩餘車位 <span>${item.ps}</span>
-                      <div class="drag-hint">👇 按住即可拖拉排序</div>`;
-
-      div.addEventListener('touchstart', () => {
-        const hint = div.querySelector('.drag-hint');
-        hint.style.display = 'block';
-        setTimeout(() => { hint.style.display = 'none'; }, 2000);
-      });
-
-      div.addEventListener('dragstart', (e) => {
-        dragSrcEl = div;
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', div.dataset.id);
-      });
-
-      div.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        div.classList.add('drag-over');
-      });
-
-      div.addEventListener('dragleave', () => {
-        div.classList.remove('drag-over');
-      });
-
-      div.addEventListener('drop', (e) => {
-        e.preventDefault();
-        div.classList.remove('drag-over');
-        const srcId = dragSrcEl.dataset.id;
-        const tgtId = div.dataset.id;
-
-        if (srcId !== tgtId) {
-          const srcIndex = Array.from(parkingList.children).findIndex(el => el.dataset.id === srcId);
-          const tgtIndex = Array.from(parkingList.children).findIndex(el => el.dataset.id === tgtId);
-          if (srcIndex < tgtIndex) {
-            parkingList.insertBefore(dragSrcEl, div.nextSibling);
-          } else {
-            parkingList.insertBefore(dragSrcEl, div);
-          }
-          saveOrder();
-        }
-      });
-
-      return div;
+    function saveOrderToCookie(order) {
+      document.cookie = "parkingOrder=" + order.join(",") + "; path=/; max-age=31536000";
     }
 
-    function saveOrder() {
-      const order = Array.from(parkingList.children).map(div => div.dataset.id);
-      document.cookie = `${storageKey}=${order.join(',')}; path=/; max-age=31536000`;
+    function getOrderFromCookie() {
+      const match = document.cookie.match(/(?:^|;\s*)parkingOrder=([^;]*)/);
+      return match ? match[1].split(",").map(id => parseInt(id)) : null;
     }
 
-    function loadOrder() {
-      const cookie = document.cookie.split('; ').find(row => row.startsWith(storageKey + '='));
-      return cookie ? cookie.split('=')[1].split(',').map(id => parseInt(id)) : null;
-    }
-
-    function renderLots(data) {
-      parkingList.innerHTML = '';
-      const order = loadOrder();
+    function sortByCookie(data) {
+      const order = getOrderFromCookie();
       if (order) {
-        order.forEach(id => {
-          const lot = data.find(l => l.id === id);
-          if (lot) parkingList.appendChild(createLot(lot));
+        data.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+      }
+      return data;
+    }
+
+    function renderParkingLots(data) {
+      const listEl = document.getElementById("parking-list");
+      listEl.innerHTML = "";
+      data.forEach(lot => {
+        const div = document.createElement("div");
+        div.className = "lot";
+        div.dataset.id = lot.id;
+        div.innerHTML = `
+          🚗 ${lot.name} 剩餘車位 ${lot.ps}
+          <small>👆 按住即可拖拉排序</small>
+        `;
+        div.addEventListener("touchstart", () => {
+          div.classList.add("show-hint");
+          setTimeout(() => div.classList.remove("show-hint"), 2000);
         });
-        data.forEach(lot => {
-          if (!order.includes(lot.id)) parkingList.appendChild(createLot(lot));
-        });
-      } else {
-        data.forEach(lot => parkingList.appendChild(createLot(lot)));
+        listEl.appendChild(div);
+      });
+    }
+
+    renderParkingLots(sortByCookie([...parkingData]));
+
+    let dragReady = false;
+    let pressTimer = null;
+    const listElement = document.getElementById("parking-list");
+
+    new Sortable(listElement, {
+      animation: 150,
+      handle: ".lot",
+      disabled: true,
+      onEnd: function () {
+        const newOrder = [...document.querySelectorAll('.lot')].map(el => parseInt(el.dataset.id));
+        saveOrderToCookie(newOrder);
+      }
+    });
+
+    listElement.addEventListener("touchstart", function (e) {
+      if (e.target.closest(".lot")) {
+        pressTimer = setTimeout(() => {
+          dragReady = true;
+          Sortable.get(listElement).option("disabled", false);
+        }, 500); // 長按 0.5 秒才開啟拖拉
+      }
+    });
+
+    listElement.addEventListener("touchend", function () {
+      clearTimeout(pressTimer);
+      if (dragReady) {
+        setTimeout(() => Sortable.get(listElement).option("disabled", true), 500);
+        dragReady = false;
+      }
+    });
+
+    async function fetchParkingData() {
+      const error = document.getElementById('error');
+      try {
+        const updated = parkingData.map(p => ({
+          ...p,
+          ps: Math.floor(Math.random() * 10)
+        }));
+        renderParkingLots(sortByCookie(updated));
+        error.textContent = '';
+      } catch (err) {
+        if (!navigator.onLine) {
+          error.textContent = '您需要先連網';
+        } else {
+          error.textContent = '伺服器有問題，請稍後再試';
+        }
       }
     }
 
-    function fetchParkingData() {
-      const ua = navigator.userAgent;
-      const android = ua.indexOf('Android') > -1 || ua.indexOf('Adr') > -1;
-      const iOS = !!ua.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/);
-      if (iOS) {
-        document.getElementById("iosPromptBubble").classList.remove("hidden");
-      }
-      // 模擬更新資料：隨機變化剩餘車位
-      mockData.forEach(item => item.ps = Math.floor(Math.random() * 10));
-      renderLots(mockData);
-    }
-
-    fetchParkingData();
     setInterval(fetchParkingData, 5000);
   </script>
 </body>
